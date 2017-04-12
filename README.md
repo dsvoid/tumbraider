@@ -6,7 +6,7 @@ Downloads images off of a tumblr iteratively. Requires Python 3.
 python3 tumbraider.py [-h] [-f FOLDER] [-s START] [-p PAGES] [-v] blog
 
 positional arguments:
-	blog                  download images from specified tumblr blog
+  blog                  download images from specified tumblr blog
 
 optional arguments:
   -h, --help            show this help message and exit
