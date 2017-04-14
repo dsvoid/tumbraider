@@ -47,49 +47,45 @@ while count > 0:
             photoset = enumerate(post['photos'])
             for index, photo in photoset:
                 url = photo['original_size']['url']
-                imgR = requests.get(url)
+                if(url[-3:] == 'gif'):
+                    imgR = requests.get(url)
 
-                filename = str(post['timestamp']) + ' ' + post['date'][:10]
+                    filename = str(post['timestamp']) + ' ' + post['date'][:10]
 
-                if post['summary'] != '':
-                    l = len(post['summary'])
-                    summary = post['summary'][:min(50, l)]
-                    summary = summary.replace('<', '_')
-                    summary = summary.replace('>', '_')
-                    summary = summary.replace(':', '_')
-                    summary = summary.replace('"', '_')
-                    summary = summary.replace('/', '_')
-                    summary = summary.replace('\\','_')
-                    summary = summary.replace('|', '_')
-                    summary = summary.replace('?', '_')
-                    summary = summary.replace('*', '_')
-                    summary = summary.replace('\n', '')
-                    filename = filename + ' ' + summary
+                    if post['summary'] != '':
+                        l = len(post['summary'])
+                        summary = post['summary'][:min(50, l)]
+                        summary = summary.replace('<', '_')
+                        summary = summary.replace('>', '_')
+                        summary = summary.replace(':', '_')
+                        summary = summary.replace('"', '_')
+                        summary = summary.replace('/', '_')
+                        summary = summary.replace('\\','_')
+                        summary = summary.replace('|', '_')
+                        summary = summary.replace('?', '_')
+                        summary = summary.replace('*', '_')
+                        summary = summary.replace('\n', '')
+                        filename = filename + ' ' + summary
 
-                if len(post['photos']) > 1:
-                    sigfigs = len(str(len(post['photos'])))
-                    filename = filename + ' ' + str(index+1).zfill(sigfigs)
+                    if len(post['photos']) > 1:
+                        sigfigs = len(str(len(post['photos'])))
+                        filename = filename + ' ' + str(index+1).zfill(sigfigs)
 
-                ext = url[url.rfind('.'):]
-                filename = filename + ext
+                    ext = url[url.rfind('.'):]
+                    filename = filename + ext
 
-                if args.verbose:
-                    print filename
+                    if args.verbose:
+                        print filename
 
-                if folder != '':
-                    if folder[-1] == '/':
-                        folder = folder[:-1]
-                    filename = folder + '/' + filename
+                    if folder != '':
+                        if folder[-1] == '/':
+                            folder = folder[:-1]
+                        filename = folder + '/' + filename
 
-                if not os.path.exists(folder):
-                    os.makedirs(folder)
-                # save gifs differently, PIL can't download animated gifs right
-                if ext != 'gif':
+                    if not os.path.exists(folder):
+                        os.makedirs(folder)
                     i = Image.open(BytesIO(imgR.content))
-                    i.save(filename)
-                else:
-                    with open(filename, 'wb') as f:
-                        f.write(imgR.content)
+                    i.save(filename, save_all=True)
     count -= 20
     start += 20
 
