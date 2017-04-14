@@ -53,7 +53,7 @@ class tumbraider:
                                 print 'ERROR'
                             print 'Exception raised when trying to download ' + url + ' as ' + filename + ':'
                             print ex
-                        if success:
+                        if verbose and success:
                             print 'OK'
             # advance for next request
             count -= 20
