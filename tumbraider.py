@@ -7,102 +7,133 @@ import os
 from PIL import Image
 from io import BytesIO
 
-# argument parsing for command-line use
-parser = argparse.ArgumentParser()
-parser.add_argument("blog", help="download images from specified tumblr blog")
-parser.add_argument("-f", "--folder", help="save images to specified folder")
-parser.add_argument("-s", "--start", help="specify post from blog to start downloading images from (0 by default)", type=int)
-parser.add_argument("-p", "--posts", help="specify number of posts from blog to download images from (unlimited by default)", type=int)
-parser.add_argument("-v", "--verbose", help="verbose output", action="store_true")
-args = parser.parse_args()
 
-# connect to tumblr API
-client = pytumblr.TumblrRestClient(
-    keys.consumerKey,       # grab these from your keys.py file
-    keys.consumerSecret,
-    keys.OAuthKey,
-    keys.OAuthSecret
-)
+class tumbraider:
+    def __init__(self):
+        # connect to tumblr API
+        self.client = pytumblr.TumblrRestClient(
+            keys.consumerKey,       # grab these from your keys.py file
+            keys.consumerSecret,
+            keys.OAuthKey,
+            keys.OAuthSecret
+        )
 
-# set arguments
-folder = ""
-if args.folder is not None:
-    folder = args.folder
+    def raid(self, blog, count, folder="", start=0, verbose=False):
+        print 'Downloading images in ' + str(count) + ' posts from ' + args.blog + '.tumblr.com...'
 
-start = 0
-if args.start is not None:
-    start = args.start
+        if verbose and folder != "":
+            print 'Saving images to ' + os.path.abspath(folder)
 
-info = client.blog_info(args.blog)
-count = info['blog']['posts']
-if args.posts is not None and args.posts < count:
-    count = args.posts
+        while count > 0:
+            # request posts from tumblr API
+            posts = self.client.posts(blog,
+                    api_key = keys.consumerKey,
+                    offset = start,
+                    limit = count if count < 20 else 20)
 
-print 'Downloading images in ' + str(count) + ' posts from ' + args.blog + '.tumblr.com...'
+            # iterate over the results of each request
+            for post in posts['posts']:
+                # look for images specifically
+                if 'photos' in post:
+                    photoset = enumerate(post['photos'])
+                    for index, photo in photoset:
+                        # format filename
+                        filename = self.format_filename(post, photo, index)
+                        if verbose:
+                            print filename,
 
-if args.verbose and args.folder is not None:
-    print 'Saving images to ' + os.path.abspath(folder)
+                        # download image
+                        url = photo['original_size']['url']
+                        success = True
+                        try:
+                            self.download_image(filename, folder, url)
+                        except Exception, ex:
+                            success = False
+                            if verbose:
+                                print 'ERROR'
+                            print 'Exception raised when trying to download ' + url + ' as ' + filename + ':'
+                            print ex
+                        if verbose and success:
+                            print 'OK'
+            # advance for next request
+            count -= 20
+            start += 20
 
-while count > 0:
-    # request posts from tumblr API
-    posts = client.posts('iksiovs',
-            api_key = 'EpOrfPgSIE2v64yez9hWozCL8xLJ5eb4IbH4FX4abfMEI4Ix1x',
-            offset = start,
-            limit = count if count < 20 else 20)
+        print 'Finished downloading images from ' + args.blog + '.tumblr.com'
 
-    # iterate over the results of each request
-    for post in posts['posts']:
-        # look for images specifically
-        if 'photos' in post:
-            photoset = enumerate(post['photos'])
-            for index, photo in photoset: 
-                # format filename: timestamp, date, summary, photoset index, ext
-                filename = str(post['timestamp']) + ' ' + post['date'][:10]
+    def format_filename(self, post, photo, index):
+        # format filename: timestamp, date, summary, photoset index, ext
+        filename = str(post['timestamp']) + ' ' + post['date'][:10]
 
-                if post['summary'] != '':
-                    l = len(post['summary'])
-                    # strip illegal characters from summary like <>:"/\|?*
-                    summary = post['summary'][:min(50, l)]
-                    summary = summary.replace('<', '_')
-                    summary = summary.replace('>', '_')
-                    summary = summary.replace(':', '_')
-                    summary = summary.replace('"', '_')
-                    summary = summary.replace('/', '_')
-                    summary = summary.replace('\\','_')
-                    summary = summary.replace('|', '_')
-                    summary = summary.replace('?', '_')
-                    summary = summary.replace('*', '_')
-                    summary = summary.replace('\n', '')
-                    filename = filename + ' ' + summary
+        if post['summary'] != '':
+            l = len(post['summary'])
+            # strip illegal characters from summary like <>:"/\|?*
+            summary = post['summary'][:min(50, l)]
+            summary = summary.replace('<', '_')
+            summary = summary.replace('>', '_')
+            summary = summary.replace(':', '_')
+            summary = summary.replace('"', '_')
+            summary = summary.replace('/', '_')
+            summary = summary.replace('\\','_')
+            summary = summary.replace('|', '_')
+            summary = summary.replace('?', '_')
+            summary = summary.replace('*', '_')
+            summary = summary.replace('\n', '')
+            filename = filename + ' ' + summary
 
-                if len(post['photos']) > 1:
-                    sigfigs = len(str(len(post['photos'])))
-                    filename = filename + ' ' + str(index+1).zfill(sigfigs)
+        if len(post['photos']) > 1:
+            sigfigs = len(str(len(post['photos'])))
+            filename = filename + ' ' + str(index+1).zfill(sigfigs)
 
-                url = photo['original_size']['url']
-                ext = url[url.rfind('.'):]
-                filename = filename + ext
+        url = photo['original_size']['url']
+        ext = url[url.rfind('.'):]
+        filename = filename + ext
+        return filename
 
-                if args.verbose:
-                    print filename
+    def download_image(self, filename, folder, url):
+        if folder != '':
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            if folder[-1] == '/':
+                folder = folder[:-1]
+        imgR = requests.get(url)
+        # raise an exception if the request didn't work out
+        imgR.raise_for_status()
 
-                if folder != '':
-                    if not os.path.exists(folder):
-                        os.makedirs(folder)
-                    if folder[-1] == '/':
-                        folder = folder[:-1]
-                    filename = folder + '/' + filename
+        i = Image.open(BytesIO(imgR.content))
+        # save non-gifs normally...
+        if url[-3:] != 'gif':
+            i.save(folder + '/' + filename)
+        # ...but save gifs by setting save_all=True to get all their frames
+        else:
+            i.save(folder + '/' + filename, save_all=True)
 
-                # download image
-                imgR = requests.get(url)
-                i = Image.open(BytesIO(imgR.content))
-                if url[-3:] != 'gif':
-                    i.save(filename)
-                else:
-                    i.save(filename, save_all=True)
-    # advance for next request
-    count -= 20
-    start += 20
+if __name__ == '__main__':
+    # argument parsing for command-line use
+    parser = argparse.ArgumentParser()
+    parser.add_argument("blog", help="download images from specified tumblr blog")
+    parser.add_argument("-f", "--folder", help="save images to specified folder (program directory by default)")
+    parser.add_argument("-s", "--start", help="specify post from blog to start downloading images from (0 by default)", type=int)
+    parser.add_argument("-p", "--posts", help="specify number of posts from blog to download images from (unlimited by default)", type=int)
+    parser.add_argument("-v", "--verbose", help="verbose output", action="store_true")
+    args = parser.parse_args()
 
+    tr = tumbraider()
 
-print 'Finished downloading images from ' + args.blog + '.tumblr.com'
+    # set arguments
+    folder = ""
+    if args.folder is not None:
+        folder = args.folder
+
+    start = 0
+    if args.start is not None:
+        start = args.start
+
+    info = tr.client.blog_info(args.blog)
+    count = info['blog']['posts']
+    if args.posts is not None and args.posts < count:
+        count = args.posts
+    
+    # begin raiding the tumb
+    tr.raid(args.blog, count, folder, start, args.verbose)
+
