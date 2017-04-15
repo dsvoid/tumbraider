@@ -19,6 +19,8 @@ class tumbraider:
         )
 
     def raid(self, blog, count, folder="", start=0, verbose=False):
+        if count < 1:
+            raise self.InvalidCountError(count)
         print 'Downloading images in ' + str(count) + ' posts from ' + args.blog + '.tumblr.com...'
 
         if verbose and folder != "":
@@ -26,10 +28,7 @@ class tumbraider:
 
         while count > 0:
             # request posts from tumblr API
-            posts = self.client.posts(blog,
-                    api_key = keys.consumerKey,
-                    offset = start,
-                    limit = count if count < 20 else 20)
+            posts = self.request_posts(blog, count, start)
 
             # iterate over the results of each request
             for post in posts['posts']:
@@ -53,8 +52,9 @@ class tumbraider:
                                 print 'ERROR'
                             print 'Exception raised when trying to download ' + url + ' as ' + filename + ':'
                             print ex
-                        if verbose and success:
-                            print 'OK'
+                        else:
+                            if verbose:
+                                print 'OK'
             # advance for next request
             count -= 20
             start += 20
@@ -108,6 +108,30 @@ class tumbraider:
         else:
             i.save(folder + '/' + filename, save_all=True)
 
+    def request_posts(self, blog, count, start):
+        if count < 1:
+            raise self.InvalidCountError(count)
+        if start < 0 or start > self.num_posts(blog) - 1:
+            raise self.InvalidStartError(start, self.num_posts(blog))
+        posts = self.client.posts(blog,
+                api_key = keys.consumerKey,
+                offset = start,
+                limit = count if count < 20 else 20)
+        return posts
+
+    def num_posts(self, blog):
+        info = self.client.blog_info(blog)
+        count = info['blog']['posts']
+        return count
+
+    class InvalidCountError(Exception):
+        def __init__(self, count):
+            print 'ERROR: invalid number of posts. Expected 1 or more, got ' + str(count)
+
+    class InvalidStartError(Exception):
+        def __init__(self, start, num_posts):
+            print 'ERROR: invalid starting post number. Expected 0 to ' + str(num_posts-1) + ', got ' + str(start)
+
 if __name__ == '__main__':
     # argument parsing for command-line use
     parser = argparse.ArgumentParser()
@@ -129,8 +153,7 @@ if __name__ == '__main__':
     if args.start is not None:
         start = args.start
 
-    info = tr.client.blog_info(args.blog)
-    count = info['blog']['posts']
+    count = tr.num_posts(args.blog)
     if args.posts is not None and args.posts < count:
         count = args.posts
     
