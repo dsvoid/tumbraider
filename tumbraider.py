@@ -114,7 +114,9 @@ class tumbraider:
 
     def request_posts(self, count, start, blog=None):
         if blog is None:
-            blog=self.current_blog_info['blog']['name']
+            blog = self.get_current_blog_name()
+        if blog is None:
+            raise self.NoCurrentBlogError()
         if count < 1:
             raise self.InvalidCountError(count)
         if start < 0 or start > self.num_posts(blog) - 1:
@@ -127,22 +129,31 @@ class tumbraider:
 
     def num_posts(self, blog=None):
         if blog is None:
-            blog = self.current_blog_info['blog']['name']
-        if self.current_blog_info is not None and self.current_blog_info['blog']['name'] == blog:
+            blog = self.get_current_blog_name()
+        if blog is None:
+            raise self.NoCurrentBlogError()
+        if blog == self.get_current_blog_name():
             return self.current_blog_info['blog']['posts']
         else:
             return self.client.blog_info(blog)['blog']['posts']
 
     def set_current_blog_info(self, blog):
-        info = self.client.blog_info(blog)
-        # the 'meta' key is only returned when the blog doesn't exist
-        if 'meta' in info:
+        # only update the blog info if it's not going to be identical
+        if blog != self.get_current_blog_name():
+            info = self.client.blog_info(blog)
+        # the 'blog' key only exists if the blog exists
+        if 'blog' not in info:
             raise self.InvalidBlogError(blog)
-        # not all blogs have a 'type', but those that do may be private: check!
-        if 'type' in info['blog']:
-            if info['blog']['type'] == 'private':
-                raise self.PrivateBlogError(blog)
+        # not all blogs have a 'type', those that do may be private: do a check
+        if 'type' in info['blog'] and info['blog']['type'] == 'private':
+            raise self.PrivateBlogError(blog)
         self.current_blog_info = info
+
+    def get_current_blog_name(self):
+        if self.current_blog_info is not None and 'blog' in self.current_blog_info:
+            return self.current_blog_info['blog']['name']
+        else:
+            return None
 
     class InvalidCountError(Exception):
         def __init__(self, count):
@@ -159,6 +170,11 @@ class tumbraider:
     class PrivateBlogError(Exception):
         def __init__(self, blog):
             print 'ERROR: the blog named ' + blog + ' is private.'
+
+    class NoCurrentBlogError(Exception):
+        def __init__(self):
+            print 'ERROR: the current blog wasn\'t set when the method was called.'
+
 
 if __name__ == '__main__':
     # argument parsing for command-line use
