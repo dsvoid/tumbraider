@@ -17,18 +17,24 @@ class tumbraider:
             keys.OAuthKey,
             keys.OAuthSecret
         )
+        self.current_blog_info = None
 
     def raid(self, blog, count, folder="", start=0, verbose=False):
+        # set the blog's info once to minimize requests to the tumblr API
+        self.set_current_blog_info(blog)
+
+        # handle invalid input
         if count < 1:
             raise self.InvalidCountError(count)
+        if start < 0 or start > self.num_posts() - 1:
+            raise self.InvalidStartError(start, self.num_posts())
         print 'Downloading images in ' + str(count) + ' posts from ' + args.blog + '.tumblr.com...'
-
         if verbose and folder != "":
             print 'Saving images to ' + os.path.abspath(folder)
 
         while count > 0:
             # request posts from tumblr API
-            posts = self.request_posts(blog, count, start)
+            posts = self.request_posts(count, start)
 
             # iterate over the results of each request
             for post in posts['posts']:
@@ -43,11 +49,9 @@ class tumbraider:
 
                         # download image
                         url = photo['original_size']['url']
-                        success = True
                         try:
                             self.download_image(filename, folder, url)
                         except Exception, ex:
-                            success = False
                             if verbose:
                                 print 'ERROR'
                             print 'Exception raised when trying to download ' + url + ' as ' + filename + ':'
@@ -108,7 +112,9 @@ class tumbraider:
         else:
             i.save(folder + '/' + filename, save_all=True)
 
-    def request_posts(self, blog, count, start):
+    def request_posts(self, count, start, blog=None):
+        if blog is None:
+            blog=self.current_blog_info['blog']['name']
         if count < 1:
             raise self.InvalidCountError(count)
         if start < 0 or start > self.num_posts(blog) - 1:
@@ -119,10 +125,24 @@ class tumbraider:
                 limit = count if count < 20 else 20)
         return posts
 
-    def num_posts(self, blog):
+    def num_posts(self, blog=None):
+        if blog is None:
+            blog = self.current_blog_info['blog']['name']
+        if self.current_blog_info is not None and self.current_blog_info['blog']['name'] == blog:
+            return self.current_blog_info['blog']['posts']
+        else:
+            return self.client.blog_info(blog)['blog']['posts']
+
+    def set_current_blog_info(self, blog):
         info = self.client.blog_info(blog)
-        count = info['blog']['posts']
-        return count
+        # the 'meta' key is only returned when the blog doesn't exist
+        if 'meta' in info:
+            raise self.InvalidBlogError(blog)
+        # not all blogs have a 'type', but those that do may be private: check!
+        if 'type' in info['blog']:
+            if info['blog']['type'] == 'private':
+                raise self.PrivateBlogError(blog)
+        self.current_blog_info = info
 
     class InvalidCountError(Exception):
         def __init__(self, count):
@@ -131,6 +151,14 @@ class tumbraider:
     class InvalidStartError(Exception):
         def __init__(self, start, num_posts):
             print 'ERROR: invalid starting post number. Expected 0 to ' + str(num_posts-1) + ', got ' + str(start)
+
+    class InvalidBlogError(Exception):
+        def __init__(self, blog):
+            print 'ERROR: the blog named ' + blog + ' does not exist.'
+
+    class PrivateBlogError(Exception):
+        def __init__(self, blog):
+            print 'ERROR: the blog named ' + blog + ' is private.'
 
 if __name__ == '__main__':
     # argument parsing for command-line use
