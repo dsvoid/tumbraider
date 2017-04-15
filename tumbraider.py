@@ -30,8 +30,8 @@ class tumbraider:
             raise self.InvalidStartError(start, self.num_posts())
 
         # correct count if it exceeds number of posts
-        if count > self.num_posts():
-            count = self.num_posts()
+        if count > self.num_posts() - start:
+            count = self.num_posts() - start
 
         print 'Downloading images in ' + str(count) + ' posts from ' + blog + '.tumblr.com...'
         if verbose and folder != "":
@@ -50,20 +50,11 @@ class tumbraider:
                         # format filename
                         filename = self.format_filename(post, photo, index)
                         if verbose:
-                            print filename,
+                            print filename
 
                         # download image
                         url = photo['original_size']['url']
-                        try:
-                            self.download_image(filename, folder, url)
-                        except Exception, ex:
-                            if verbose:
-                                print 'ERROR'
-                            print 'Exception raised when trying to download ' + url + ' as ' + filename + ':'
-                            print ex
-                        else:
-                            if verbose:
-                                print 'OK'
+                        self.download_image(filename, folder, url)
             # advance for next request
             count -= 20
             start += 20
@@ -100,22 +91,28 @@ class tumbraider:
         return filename
 
     def download_image(self, filename, folder, url):
-        if folder != '':
-            if not os.path.exists(folder):
-                os.makedirs(folder)
-            if folder[-1] == '/':
-                folder = folder[:-1]
-        imgR = requests.get(url)
         # raise an exception if the request didn't work out
-        imgR.raise_for_status()
+        try:
+            if folder != '':
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+                if folder[-1] == '/':
+                    folder = folder[:-1]
+            imgR = requests.get(url)
+            imgR.raise_for_status()
 
-        i = Image.open(BytesIO(imgR.content))
-        # save non-gifs normally...
-        if url[-3:] != 'gif':
-            i.save(folder + '/' + filename)
-        # ...but save gifs by setting save_all=True to get all their frames
-        else:
-            i.save(folder + '/' + filename, save_all=True)
+            i = Image.open(BytesIO(imgR.content))
+            # save non-gifs normally...
+            if url[-3:] != 'gif':
+                i.save(folder + '/' + filename)
+            # ...but save gifs by setting save_all=True to get all their frames
+            else:
+                i.save(folder + '/' + filename, save_all=True)
+        except Exception, ex:
+            print 'ERROR: Exception raised when trying to download',
+            print url + ' as ' + filename + ' to ' + folder + ':'
+            print ex
+            pass
 
     def request_posts(self, count, start, blog=None):
         if blog is None:

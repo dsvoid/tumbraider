@@ -64,10 +64,7 @@ class TumbRaiderTests(unittest.TestCase):
         self.tr.raid('staff', 10, n - 11, folder, True)
         self.assertTrue(os.path.exists(folder))    
         shutil.rmtree(folder)
-        self.tr.raid('staff', 10, n - 11, folder + '/')
-        self.assertTrue(os.path.exists(folder))
-        shutil.rmtree(folder)
-        self.tr.raid('blogwithonepost', 10, folder=folder)
+        self.tr.raid('staff', 9999999, n - 11, folder + '/')
         self.assertTrue(os.path.exists(folder))
         shutil.rmtree(folder)
 
@@ -85,6 +82,27 @@ class TumbRaiderTests(unittest.TestCase):
             self.tr.raid('/', 1)
         with self.assertRaises(self.tr.PrivateBlogError):
             self.tr.raid('iikkssiioovvss', 1)
+
+    def test_plain_download(self):
+        """Make sure download_image() method works as intended"""
+        folder = 'tmp'
+        self.tr.download_image('gif.gif', folder,
+            'https://upload.wikimedia.org/wikipedia/commons/e/e1/Graph_Laplacian_Diffusion_Example.gif')
+        self.assertTrue(os.path.exists(folder))
+        shutil.rmtree(folder)
+        self.tr.download_image('png.png', folder + '/',
+            'https://upload.wikimedia.org/wikipedia/commons/7/70/Example.png')
+        self.assertTrue(os.path.exists(folder))
+        shutil.rmtree(folder)
+
+    def test_bad_download(self):
+        """Raise exeptions when bad arguments are given to download_image()"""
+        folder = 'tmp'
+        filename = 'lol.png'
+        url = 'bad url'
+        self.tr.download_image(filename, folder, url)
+        self.assertTrue(not os.path.exists(folder + filename))
+        shutil.rmtree(folder)
 
 if __name__ == '__main__':
     unittest.main()
