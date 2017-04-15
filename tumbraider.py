@@ -19,7 +19,7 @@ class tumbraider:
         )
         self.current_blog_info = None
 
-    def raid(self, blog, count, folder="", start=0, verbose=False):
+    def raid(self, blog, count, start=0, folder='', verbose=False):
         # set the blog's info once to minimize requests to the tumblr API
         self.set_current_blog_info(blog)
 
@@ -28,7 +28,12 @@ class tumbraider:
             raise self.InvalidCountError(count)
         if start < 0 or start > self.num_posts() - 1:
             raise self.InvalidStartError(start, self.num_posts())
-        print 'Downloading images in ' + str(count) + ' posts from ' + args.blog + '.tumblr.com...'
+
+        # correct count if it exceeds number of posts
+        if count > self.num_posts():
+            count = self.num_posts()
+
+        print 'Downloading images in ' + str(count) + ' posts from ' + blog + '.tumblr.com...'
         if verbose and folder != "":
             print 'Saving images to ' + os.path.abspath(folder)
 
@@ -63,7 +68,7 @@ class tumbraider:
             count -= 20
             start += 20
 
-        print 'Finished downloading images from ' + args.blog + '.tumblr.com'
+        print 'Finished downloading images from ' + blog + '.tumblr.com'
 
     def format_filename(self, post, photo, index):
         # format filename: timestamp, date, summary, photoset index, ext
@@ -121,6 +126,7 @@ class tumbraider:
             raise self.InvalidCountError(count)
         if start < 0 or start > self.num_posts(blog) - 1:
             raise self.InvalidStartError(start, self.num_posts(blog))
+        # limit count
         posts = self.client.posts(blog,
                 api_key = keys.consumerKey,
                 offset = start,
@@ -139,6 +145,7 @@ class tumbraider:
 
     def set_current_blog_info(self, blog):
         # only update the blog info if it's not going to be identical
+        info = self.current_blog_info
         if blog != self.get_current_blog_name():
             info = self.client.blog_info(blog)
         # the 'blog' key only exists if the blog exists
@@ -202,5 +209,5 @@ if __name__ == '__main__':
         count = args.posts
     
     # begin raiding the tumb
-    tr.raid(args.blog, count, folder, start, args.verbose)
+    tr.raid(args.blog, count, start, folder, args.verbose)
 

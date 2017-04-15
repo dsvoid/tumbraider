@@ -1,4 +1,6 @@
 import unittest
+import os
+import shutil
 from tumbraider import tumbraider
 
 class TumbRaiderTests(unittest.TestCase):
@@ -7,7 +9,7 @@ class TumbRaiderTests(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TumbRaiderTests, self).__init__(*args, **kwargs)
         self.tr = tumbraider()
-
+    
     def test_plain_requests(self):
         """Make sure request_posts() and set_current_blog_info() work"""
         self.tr.set_current_blog_info('staff')
@@ -15,12 +17,13 @@ class TumbRaiderTests(unittest.TestCase):
         posts = self.tr.request_posts(5, self.tr.num_posts() - 5)
         self.assertTrue(len(posts['posts']) == 5)
 
-    def test_BlogErrors(self):
-        """Raise exceptions when requesting private or non-existent blogs"""
-        # blogs must exist
+    def test_InvalidBlogError(self):
+        """Raise exceptions when requesting non-existent blogs"""
         with self.assertRaises(self.tr.InvalidBlogError):
             self.tr.set_current_blog_info('/')
-        # blogs cannot be private (for now...)
+
+    def test_PrivateBlogError(self):
+        """Raise exceptions when requesting private blogs (for now...)"""
         with self.assertRaises(self.tr.PrivateBlogError):
             # note: this blog is empty and I only made it for this test
             self.tr.set_current_blog_info('iikkssiioovvss')
@@ -53,6 +56,35 @@ class TumbRaiderTests(unittest.TestCase):
         with self.assertRaises(self.tr.NoCurrentBlogError):
             self.tr.num_posts()
 
+    def test_plain_raid(self):
+        """Make sure the raid() method works as intended"""
+        folder = 'tmp'
+        self.tr.current_blog_info = None
+        n = self.tr.num_posts('staff')
+        self.tr.raid('staff', 10, n - 11, folder, True)
+        self.assertTrue(os.path.exists(folder))    
+        shutil.rmtree(folder)
+        self.tr.raid('staff', 10, n - 11, folder + '/')
+        self.assertTrue(os.path.exists(folder))
+        shutil.rmtree(folder)
+        self.tr.raid('blogwithonepost', 10, folder=folder)
+        self.assertTrue(os.path.exists(folder))
+        shutil.rmtree(folder)
+
+    def test_bad_raid(self):
+        """Raise exceptions when bad arguments are given to raid()"""
+        self.tr.current_blog_info = None
+        n = self.tr.num_posts('staff')
+        with self.assertRaises(self.tr.InvalidCountError):
+            self.tr.raid('staff', 0)
+        with self.assertRaises(self.tr.InvalidStartError):
+            self.tr.raid('staff', 1, -1)
+        with self.assertRaises(self.tr.InvalidStartError):
+            self.tr.raid('staff', 1, n)
+        with self.assertRaises(self.tr.InvalidBlogError):
+            self.tr.raid('/', 1)
+        with self.assertRaises(self.tr.PrivateBlogError):
+            self.tr.raid('iikkssiioovvss', 1)
+
 if __name__ == '__main__':
     unittest.main()
-
