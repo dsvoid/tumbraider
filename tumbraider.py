@@ -4,6 +4,7 @@ import requests
 import pytumblr
 import re
 import os
+from pprint import pprint
 from PIL import Image
 from io import BytesIO
 
@@ -43,25 +44,36 @@ class tumbraider:
 
             # iterate over the results of each request
             for post in posts['posts']:
-                # look for images specifically
+                # look for images
                 if 'photos' in post:
                     photoset = enumerate(post['photos'])
                     for index, photo in photoset:
                         # format filename
-                        filename = self.format_filename(post, photo, index)
+                        filename = self.format_image_filename(post, photo, index)
                         if verbose:
                             print filename
-
                         # download image
                         url = photo['original_size']['url']
                         self.download_image(filename, folder, url)
+                # look for videos
+                if 'player' in post and type(post['player'][0]) is dict:
+                    embed_code = post['player'][0]['embed_code']
+                    src_index = embed_code.find('<source src="') + 13
+                    if src_index != 12:
+                        filename = self.format_video_filename(post)
+                        if verbose:
+                            print filename
+                        # download video
+                        url = embed_code[src_index:embed_code.find('"', src_index)]
+                        self.download_video(filename, folder, url)
+
             # advance for next request
             count -= 20
             start += 20
 
         print 'Finished downloading images from ' + blog + '.tumblr.com'
 
-    def format_filename(self, post, photo, index):
+    def format_image_filename(self, post, photo, index):
         # format filename: timestamp, date, summary, photoset index, ext
         filename = str(post['timestamp']) + ' ' + post['date'][:10]
 
@@ -90,6 +102,28 @@ class tumbraider:
         filename = filename + ext
         return filename
 
+    def format_video_filename(self, post):
+        # format filename: timestamp, date, summary
+        filename = str(post['timestamp']) + ' ' + post['date'][:10]
+
+        if post['summary'] != '':
+            l = len(post['summary'])
+            # strip illegal characters from summary like <>:"/\|?*
+            summary = post['summary'][:min(50, l)]
+            summary = summary.replace('<', '_')
+            summary = summary.replace('>', '_')
+            summary = summary.replace(':', '_')
+            summary = summary.replace('"', '_')
+            summary = summary.replace('/', '_')
+            summary = summary.replace('\\','_')
+            summary = summary.replace('|', '_')
+            summary = summary.replace('?', '_')
+            summary = summary.replace('*', '_')
+            summary = summary.replace('\n', '')
+            filename = filename + ' ' + summary
+        filename = filename + '.mp4'
+        return filename
+
     def download_image(self, filename, folder, url):
         # raise an exception if the request didn't work out
         try:
@@ -108,6 +142,26 @@ class tumbraider:
             # ...but save gifs by setting save_all=True to get all their frames
             else:
                 i.save(folder + '/' + filename, save_all=True)
+        except Exception, ex:
+            print 'ERROR: Exception raised when trying to download',
+            print url + ' as ' + filename + ' to ' + folder + ':'
+            print ex
+            pass
+    
+    def download_video(self, filename, folder, url):
+        # raise an exception if the request didn't work out
+        try:
+            if folder != '':
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+                if folder[-1] == '/':
+                    folder = folder[:-1]
+            vidR = requests.get(url, stream = True)
+            vidR.raise_for_status()
+
+            with open(folder + '/' + filename, 'wb') as f:
+                for chunk in vidR.iter_content(1024):
+                    f.write(chunk)
         except Exception, ex:
             print 'ERROR: Exception raised when trying to download',
             print url + ' as ' + filename + ' to ' + folder + ':'
