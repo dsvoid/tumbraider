@@ -74,24 +74,7 @@ class tumbraider:
         print 'Finished downloading images from ' + blog + '.tumblr.com'
 
     def format_image_filename(self, post, photo, index):
-        # format filename: timestamp, date, summary, photoset index, ext
-        filename = str(post['timestamp']) + ' ' + post['date'][:10]
-
-        if post['summary'] != '':
-            l = len(post['summary'])
-            # strip illegal characters from summary like <>:"/\|?*
-            summary = post['summary'][:min(50, l)]
-            summary = summary.replace('<', '_')
-            summary = summary.replace('>', '_')
-            summary = summary.replace(':', '_')
-            summary = summary.replace('"', '_')
-            summary = summary.replace('/', '_')
-            summary = summary.replace('\\','_')
-            summary = summary.replace('|', '_')
-            summary = summary.replace('?', '_')
-            summary = summary.replace('*', '_')
-            summary = summary.replace('\n', '')
-            filename = filename + ' ' + summary
+        filename = self.format_base_filename(post)
 
         if len(post['photos']) > 1:
             sigfigs = len(str(len(post['photos'])))
@@ -103,6 +86,10 @@ class tumbraider:
         return filename
 
     def format_video_filename(self, post):
+        filename = self.format_base_filename(post) + '.mp4'
+        return filename
+
+    def format_base_filename(self, post):
         # format filename: timestamp, date, summary
         filename = str(post['timestamp']) + ' ' + post['date'][:10]
 
@@ -121,8 +108,8 @@ class tumbraider:
             summary = summary.replace('*', '_')
             summary = summary.replace('\n', '')
             filename = filename + ' ' + summary
-        filename = filename + '.mp4'
         return filename
+        
 
     def download_image(self, filename, folder, url):
         # raise an exception if the request didn't work out
