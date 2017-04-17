@@ -11,13 +11,14 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -f FOLDER, --folder FOLDER
-                        save images to specified folder
+                        save images to specified folder (program directory by
+                        default)
   -s START, --start START
                         specify post from blog to start downloading images
                         from (0 by default)
   -p POSTS, --posts POSTS
                         specify number of posts from blog to download images
                         from (unlimited by default)
+  -V, --videos          also download videos hosted on tumblr
   -v, --verbose         verbose output
-
 ```
