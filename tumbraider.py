@@ -4,6 +4,7 @@ import requests
 import pytumblr
 import re
 import os
+from pprint import pprint
 from PIL import Image
 from io import BytesIO
 
@@ -19,7 +20,7 @@ class tumbraider:
         )
         self.current_blog_info = None
 
-    def raid(self, blog, count, start=0, folder='', verbose=False):
+    def raid(self, blog, count, start=0, folder='', videos=False, verbose=False):
         # set the blog's info once to minimize requests to the tumblr API
         self.set_current_blog_info(blog)
 
@@ -43,26 +44,53 @@ class tumbraider:
 
             # iterate over the results of each request
             for post in posts['posts']:
-                # look for images specifically
+                # look for images
                 if 'photos' in post:
                     photoset = enumerate(post['photos'])
                     for index, photo in photoset:
                         # format filename
-                        filename = self.format_filename(post, photo, index)
+                        filename = self.format_image_filename(post, photo, index)
                         if verbose:
                             print filename
-
                         # download image
                         url = photo['original_size']['url']
-                        self.download_image(filename, folder, url)
+                        self.download_file(filename, folder, url)
+                # look for videos
+                if videos and 'player' in post and type(post['player'][0]) is dict:
+                    embed_code = post['player'][0]['embed_code']
+                    src_index = embed_code.find('<source src="') + 13
+                    if src_index != 12:
+                        filename = self.format_video_filename(post)
+                        if verbose:
+                            print filename
+                        # download video
+                        url = embed_code[src_index:embed_code.find('"', src_index)]
+                        self.download_file(filename, folder, url)
+
             # advance for next request
             count -= 20
             start += 20
 
         print 'Finished downloading images from ' + blog + '.tumblr.com'
 
-    def format_filename(self, post, photo, index):
-        # format filename: timestamp, date, summary, photoset index, ext
+    def format_image_filename(self, post, photo, index):
+        filename = self.format_base_filename(post)
+
+        if len(post['photos']) > 1:
+            sigfigs = len(str(len(post['photos'])))
+            filename = filename + ' ' + str(index+1).zfill(sigfigs)
+
+        url = photo['original_size']['url']
+        ext = url[url.rfind('.'):]
+        filename = filename + ext
+        return filename
+
+    def format_video_filename(self, post):
+        filename = self.format_base_filename(post) + '.mp4'
+        return filename
+
+    def format_base_filename(self, post):
+        # format filename: timestamp, date, summary
         filename = str(post['timestamp']) + ' ' + post['date'][:10]
 
         if post['summary'] != '':
@@ -80,17 +108,9 @@ class tumbraider:
             summary = summary.replace('*', '_')
             summary = summary.replace('\n', '')
             filename = filename + ' ' + summary
-
-        if len(post['photos']) > 1:
-            sigfigs = len(str(len(post['photos'])))
-            filename = filename + ' ' + str(index+1).zfill(sigfigs)
-
-        url = photo['original_size']['url']
-        ext = url[url.rfind('.'):]
-        filename = filename + ext
         return filename
-
-    def download_image(self, filename, folder, url):
+        
+    def download_file(self, filename, folder, url):
         # raise an exception if the request didn't work out
         try:
             if folder != '':
@@ -98,16 +118,11 @@ class tumbraider:
                     os.makedirs(folder)
                 if folder[-1] == '/':
                     folder = folder[:-1]
-            imgR = requests.get(url)
-            imgR.raise_for_status()
-
-            i = Image.open(BytesIO(imgR.content))
-            # save non-gifs normally...
-            if url[-3:] != 'gif':
-                i.save(folder + '/' + filename)
-            # ...but save gifs by setting save_all=True to get all their frames
-            else:
-                i.save(folder + '/' + filename, save_all=True)
+            r = requests.get(url)
+            r.raise_for_status()
+            with open(folder + '/' + filename, 'wb') as f:
+                for chunk in r.iter_content(1024):
+                    f.write(chunk)
         except Exception, ex:
             print 'ERROR: Exception raised when trying to download',
             print url + ' as ' + filename + ' to ' + folder + ':'
@@ -187,6 +202,7 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--folder", help="save images to specified folder (program directory by default)")
     parser.add_argument("-s", "--start", help="specify post from blog to start downloading images from (0 by default)", type=int)
     parser.add_argument("-p", "--posts", help="specify number of posts from blog to download images from (unlimited by default)", type=int)
+    parser.add_argument("-V", "--videos", help="also download videos hosted on tumblr", action="store_true")
     parser.add_argument("-v", "--verbose", help="verbose output", action="store_true")
     args = parser.parse_args()
 
@@ -206,5 +222,5 @@ if __name__ == '__main__':
         count = args.posts
     
     # begin raiding the tumb
-    tr.raid(args.blog, count, start, folder, args.verbose)
+    tr.raid(args.blog, count, start, folder, args.videos, args.verbose)
 
