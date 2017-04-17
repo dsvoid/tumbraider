@@ -2,7 +2,7 @@
 Downloads images off of a tumblr iteratively. Requires Python.
 
 ## usage
-`python tumbraider.py [-h] [-f FOLDER] [-s START] [-p POSTS] [-v] blog`
+`python tumbraider.py [-h] [-f FOLDER] [-s START] [-p POSTS] [-V] [-v] blog`
 
 ```
 positional arguments:
