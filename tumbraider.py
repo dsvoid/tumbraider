@@ -20,7 +20,7 @@ class tumbraider:
         )
         self.current_blog_info = None
 
-    def raid(self, blog, count, start=0, folder='', verbose=False):
+    def raid(self, blog, count, start=0, folder='', videos=False, verbose=False):
         # set the blog's info once to minimize requests to the tumblr API
         self.set_current_blog_info(blog)
 
@@ -54,9 +54,9 @@ class tumbraider:
                             print filename
                         # download image
                         url = photo['original_size']['url']
-                        self.download_image(filename, folder, url)
+                        self.download_file(filename, folder, url)
                 # look for videos
-                if 'player' in post and type(post['player'][0]) is dict:
+                if videos and 'player' in post and type(post['player'][0]) is dict:
                     embed_code = post['player'][0]['embed_code']
                     src_index = embed_code.find('<source src="') + 13
                     if src_index != 12:
@@ -65,7 +65,7 @@ class tumbraider:
                             print filename
                         # download video
                         url = embed_code[src_index:embed_code.find('"', src_index)]
-                        self.download_video(filename, folder, url)
+                        self.download_file(filename, folder, url)
 
             # advance for next request
             count -= 20
@@ -110,8 +110,7 @@ class tumbraider:
             filename = filename + ' ' + summary
         return filename
         
-
-    def download_image(self, filename, folder, url):
+    def download_file(self, filename, folder, url):
         # raise an exception if the request didn't work out
         try:
             if folder != '':
@@ -119,35 +118,10 @@ class tumbraider:
                     os.makedirs(folder)
                 if folder[-1] == '/':
                     folder = folder[:-1]
-            imgR = requests.get(url)
-            imgR.raise_for_status()
-
-            i = Image.open(BytesIO(imgR.content))
-            # save non-gifs normally...
-            if url[-3:] != 'gif':
-                i.save(folder + '/' + filename)
-            # ...but save gifs by setting save_all=True to get all their frames
-            else:
-                i.save(folder + '/' + filename, save_all=True)
-        except Exception, ex:
-            print 'ERROR: Exception raised when trying to download',
-            print url + ' as ' + filename + ' to ' + folder + ':'
-            print ex
-            pass
-    
-    def download_video(self, filename, folder, url):
-        # raise an exception if the request didn't work out
-        try:
-            if folder != '':
-                if not os.path.exists(folder):
-                    os.makedirs(folder)
-                if folder[-1] == '/':
-                    folder = folder[:-1]
-            vidR = requests.get(url, stream = True)
-            vidR.raise_for_status()
-
+            r = requests.get(url)
+            r.raise_for_status()
             with open(folder + '/' + filename, 'wb') as f:
-                for chunk in vidR.iter_content(1024):
+                for chunk in r.iter_content(1024):
                     f.write(chunk)
         except Exception, ex:
             print 'ERROR: Exception raised when trying to download',
@@ -228,6 +202,7 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--folder", help="save images to specified folder (program directory by default)")
     parser.add_argument("-s", "--start", help="specify post from blog to start downloading images from (0 by default)", type=int)
     parser.add_argument("-p", "--posts", help="specify number of posts from blog to download images from (unlimited by default)", type=int)
+    parser.add_argument("-V", "--videos", help="also download videos hosted on tumblr", action="store_true")
     parser.add_argument("-v", "--verbose", help="verbose output", action="store_true")
     args = parser.parse_args()
 
@@ -247,5 +222,5 @@ if __name__ == '__main__':
         count = args.posts
     
     # begin raiding the tumb
-    tr.raid(args.blog, count, start, folder, args.verbose)
+    tr.raid(args.blog, count, start, folder, args.videos, args.verbose)
 
