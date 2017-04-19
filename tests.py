@@ -67,7 +67,7 @@ class TumbRaiderTests(unittest.TestCase):
         self.tr.raid('staff', 9999999, n - 11, folder + '/')
         self.assertTrue(os.path.exists(folder))
         shutil.rmtree(folder)
-        self.tr.raid('blogwithonepost', 1, 0, folder, True, True)
+        self.tr.raid('blogwithonepost', 1, 0, folder, videos=True, verbose=True)
         self.assertTrue(os.path.exists(folder))
         shutil.rmtree(folder)
 

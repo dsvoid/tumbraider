@@ -19,10 +19,13 @@ class tumbraider:
             keys.OAuthSecret
         )
         self.current_blog_info = None
+        self.filename_format = '$d - $b - $s'
 
-    def raid(self, blog, count, start=0, folder='', videos=False, verbose=False):
+    def raid(self, blog, count, start=0, folder='', filename_format=None, videos=False, verbose=False):
         # set the blog's info once to minimize requests to the tumblr API
         self.set_current_blog_info(blog)
+        if filename_format is not None:
+            self.set_filename_format(filename_format)
 
         # handle invalid input
         if count < 1:
@@ -73,6 +76,9 @@ class tumbraider:
 
         print 'Finished downloading images from ' + blog + '.tumblr.com'
 
+    def set_filename_format(self, filename_format):
+        self.filename_format = filename_format
+
     def format_image_filename(self, post, photo, index):
         filename = self.format_base_filename(post)
 
@@ -90,24 +96,50 @@ class tumbraider:
         return filename
 
     def format_base_filename(self, post):
-        # format filename: timestamp, date, summary
-        filename = str(post['timestamp']) + ' ' + post['date'][:10]
+        # find instances of '$' in the filename_format
+        filename = self.filename_format
+        indices = [match.start() for match in re.finditer('\$', filename[:-1])]
+        l = len(post['summary'])
+        replacement_dict = {
+            'b' : post['blog_name'],
+            'c' : post['caption'],
+            'd' : post['date'],
+            'i' : post['id'],
+            'n' : post['note_count'],
+            's' : post['summary'][:min(50, l)],
+            't' : ' '.join(post['tags']),
+            'T' : post['title'] if 'title' in post else '',
+            'u' : post['post_url']
+        }
+        # iterate over those instances until none are left to process
+        while indices != []:
+            replacement = ''
+            code = filename[indices[0]+1]
+            if code in replacement_dict:
+                replacement = replacement_dict[code]
+                print replacement
+                if indices[0]+2 == len(filename):
+                    filename = filename[:indices[0]] + replacement
+                else:
+                    filename = filename[:indices[0]] + replacement + filename[indices[0]+2:]
+                for i in range(len(indices)):
+                    indices[i] += len(replacement) - 2
+            if len(indices) == 1:
+                indices = []
+            else:
+                indices = indices[1:]
 
-        if post['summary'] != '':
-            l = len(post['summary'])
-            # strip illegal characters from summary like <>:"/\|?*
-            summary = post['summary'][:min(50, l)]
-            summary = summary.replace('<', '_')
-            summary = summary.replace('>', '_')
-            summary = summary.replace(':', '_')
-            summary = summary.replace('"', '_')
-            summary = summary.replace('/', '_')
-            summary = summary.replace('\\','_')
-            summary = summary.replace('|', '_')
-            summary = summary.replace('?', '_')
-            summary = summary.replace('*', '_')
-            summary = summary.replace('\n', '')
-            filename = filename + ' ' + summary
+        # strip illegal characters from filename like <>:"/\|?*
+        filename = filename.replace('<', '_')
+        filename = filename.replace('>', '_')
+        filename = filename.replace(':', '_')
+        filename = filename.replace('"', '_')
+        filename = filename.replace('/', '_')
+        filename = filename.replace('\\','_')
+        filename = filename.replace('|', '_')
+        filename = filename.replace('?', '_')
+        filename = filename.replace('*', '_')
+        filename = filename.replace('\n', '')
         return filename
         
     def download_file(self, filename, folder, url):
@@ -200,8 +232,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("blog", help="download images from specified tumblr blog")
     parser.add_argument("-f", "--folder", help="save images to specified folder (program directory by default)")
-    parser.add_argument("-s", "--start", help="specify post from blog to start downloading images from (0 by default)", type=int)
+    parser.add_argument("-F", "--format", help="use specific format for filenames ($d-$b-$s by default)")
     parser.add_argument("-p", "--posts", help="specify number of posts from blog to download images from (unlimited by default)", type=int)
+    parser.add_argument("-s", "--start", help="specify post from blog to start downloading images from (0 by default)", type=int)
     parser.add_argument("-V", "--videos", help="also download videos hosted on tumblr", action="store_true")
     parser.add_argument("-v", "--verbose", help="verbose output", action="store_true")
     args = parser.parse_args()
@@ -220,7 +253,11 @@ if __name__ == '__main__':
     count = tr.num_posts(args.blog)
     if args.posts is not None and args.posts < count:
         count = args.posts
+
+    filename_format = '$t $d $b $s50'
+    if args.format is not None:
+        filename_format = args.format
     
     # begin raiding the tumb
-    tr.raid(args.blog, count, start, folder, args.videos, args.verbose)
+    tr.raid(args.blog, count, start, folder, filename_format, args.videos, args.verbose)
 
