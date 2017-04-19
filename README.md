@@ -2,7 +2,7 @@
 Downloads images off of a tumblr iteratively. Requires Python.
 
 ## usage
-`python tumbraider.py [-h] [-f FOLDER] [-s START] [-p POSTS] [-V] [-v] blog`
+`python tumbraider.py [-h] [-f FOLDER] [-F FORMAT] [-p POSTS] [-s START] [-V] [-v] blog`
 
 ```
 positional arguments:
@@ -13,12 +13,15 @@ optional arguments:
   -f FOLDER, --folder FOLDER
                         save images to specified folder (program directory by
                         default)
-  -s START, --start START
-                        specify post from blog to start downloading images
-                        from (0 by default)
+  -F FORMAT, --format FORMAT
+                        use specific format for filenames ($d-$b-$s by
+                        default)
   -p POSTS, --posts POSTS
                         specify number of posts from blog to download images
                         from (unlimited by default)
+  -s START, --start START
+                        specify post from blog to start downloading images
+                        from (0 by default)
   -V, --videos          also download videos hosted on tumblr
   -v, --verbose         verbose output
 ```
