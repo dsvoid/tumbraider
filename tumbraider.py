@@ -103,12 +103,12 @@ class tumbraider:
         replacement_dict = {
             'b' : post['blog_name'],
             'c' : post['caption'],
-            'd' : post['date'],
+            'd' : post['date'][:-4],
             'i' : post['id'],
             'n' : post['note_count'],
             's' : post['summary'][:min(50, l)],
             't' : ' '.join(post['tags']),
-            'T' : post['title'] if 'title' in post else '',
+            'T' : post['title'] if 'title' in post else '[no title]',
             'u' : post['post_url']
         }
         # iterate over those instances until none are left to process
@@ -117,7 +117,6 @@ class tumbraider:
             code = filename[indices[0]+1]
             if code in replacement_dict:
                 replacement = replacement_dict[code]
-                print replacement
                 if indices[0]+2 == len(filename):
                     filename = filename[:indices[0]] + replacement
                 else:
@@ -130,15 +129,11 @@ class tumbraider:
                 indices = indices[1:]
 
         # strip illegal characters from filename like <>:"/\|?*
-        filename = filename.replace('<', '_')
-        filename = filename.replace('>', '_')
-        filename = filename.replace(':', '_')
-        filename = filename.replace('"', '_')
-        filename = filename.replace('/', '_')
-        filename = filename.replace('\\','_')
-        filename = filename.replace('|', '_')
-        filename = filename.replace('?', '_')
-        filename = filename.replace('*', '_')
+        bad_chars = [match.start() for match in re.finditer('[<>:"/\\|?*]', filename)]
+        filename = list(filename)
+        for i in range(len(bad_chars)):
+            filename[i] = '_'
+        filename = ''.join(filename)
         filename = filename.replace('\n', '')
         return filename
         
