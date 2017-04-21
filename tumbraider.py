@@ -103,12 +103,12 @@ class tumbraider:
         replacement_dict = {
             'b' : post['blog_name'],
             'c' : post['caption'],
-            'd' : post['date'],
-            'i' : post['id'],
-            'n' : post['note_count'],
+            'd' : post['date'][:-4],
+            'i' : str(post['id']),
+            'n' : str(post['note_count']),
             's' : post['summary'][:min(50, l)],
             't' : ' '.join(post['tags']),
-            'T' : post['title'] if 'title' in post else '',
+            'T' : post['title'] if 'title' in post else '[no title]',
             'u' : post['post_url']
         }
         # iterate over those instances until none are left to process
@@ -117,7 +117,6 @@ class tumbraider:
             code = filename[indices[0]+1]
             if code in replacement_dict:
                 replacement = replacement_dict[code]
-                print replacement
                 if indices[0]+2 == len(filename):
                     filename = filename[:indices[0]] + replacement
                 else:
@@ -130,15 +129,11 @@ class tumbraider:
                 indices = indices[1:]
 
         # strip illegal characters from filename like <>:"/\|?*
-        filename = filename.replace('<', '_')
-        filename = filename.replace('>', '_')
-        filename = filename.replace(':', '_')
-        filename = filename.replace('"', '_')
-        filename = filename.replace('/', '_')
-        filename = filename.replace('\\','_')
-        filename = filename.replace('|', '_')
-        filename = filename.replace('?', '_')
-        filename = filename.replace('*', '_')
+        bad_chars = [match.start() for match in re.finditer('[<>:"/\\|?*]', filename)]
+        filename = list(filename)
+        for i in range(len(bad_chars)):
+            filename[i] = '_'
+        filename = ''.join(filename)
         filename = filename.replace('\n', '')
         return filename
         
@@ -148,11 +143,11 @@ class tumbraider:
             if folder != '':
                 if not os.path.exists(folder):
                     os.makedirs(folder)
-                if folder[-1] == '/':
-                    folder = folder[:-1]
+                if folder[-1] != '/':
+                    folder = folder + '/'
             r = requests.get(url)
             r.raise_for_status()
-            with open(folder + '/' + filename, 'wb') as f:
+            with open(folder + filename, 'wb') as f:
                 for chunk in r.iter_content(1024):
                     f.write(chunk)
         except Exception, ex:
@@ -232,7 +227,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("blog", help="download images from specified tumblr blog")
     parser.add_argument("-f", "--folder", help="save images to specified folder (program directory by default)")
-    parser.add_argument("-F", "--format", help="use specific format for filenames ($d-$b-$s by default)")
+    parser.add_argument("-F", "--format", help="use specific format for filenames ($d-$b-$s by default)", type=str)
     parser.add_argument("-p", "--posts", help="specify number of posts from blog to download images from (unlimited by default)", type=int)
     parser.add_argument("-s", "--start", help="specify post from blog to start downloading images from (0 by default)", type=int)
     parser.add_argument("-V", "--videos", help="also download videos hosted on tumblr", action="store_true")
