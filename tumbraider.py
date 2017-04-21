@@ -104,8 +104,8 @@ class tumbraider:
             'b' : post['blog_name'],
             'c' : post['caption'],
             'd' : post['date'][:-4],
-            'i' : post['id'],
-            'n' : post['note_count'],
+            'i' : str(post['id']),
+            'n' : str(post['note_count']),
             's' : post['summary'][:min(50, l)],
             't' : ' '.join(post['tags']),
             'T' : post['title'] if 'title' in post else '[no title]',
@@ -143,11 +143,11 @@ class tumbraider:
             if folder != '':
                 if not os.path.exists(folder):
                     os.makedirs(folder)
-                if folder[-1] == '/':
-                    folder = folder[:-1]
+                if folder[-1] != '/':
+                    folder = folder + '/'
             r = requests.get(url)
             r.raise_for_status()
-            with open(folder + '/' + filename, 'wb') as f:
+            with open(folder + filename, 'wb') as f:
                 for chunk in r.iter_content(1024):
                     f.write(chunk)
         except Exception, ex:
@@ -227,7 +227,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("blog", help="download images from specified tumblr blog")
     parser.add_argument("-f", "--folder", help="save images to specified folder (program directory by default)")
-    parser.add_argument("-F", "--format", help="use specific format for filenames ($d-$b-$s by default)")
+    parser.add_argument("-F", "--format", help="use specific format for filenames ($d-$b-$s by default)", type=str)
     parser.add_argument("-p", "--posts", help="specify number of posts from blog to download images from (unlimited by default)", type=int)
     parser.add_argument("-s", "--start", help="specify post from blog to start downloading images from (0 by default)", type=int)
     parser.add_argument("-V", "--videos", help="also download videos hosted on tumblr", action="store_true")
