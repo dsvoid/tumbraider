@@ -139,7 +139,9 @@ class tumbraider:
         filename = filename.replace('\r','')
         filename = filename.replace('\t','')
         while '  ' in filename:
+            print 'lol'
             filename = filename.replace('  ',' ')
+        print filename
         return filename
         
     def download_file(self, filename, folder, url):
@@ -254,7 +256,7 @@ if __name__ == '__main__':
     if args.posts is not None and args.posts < count:
         count = args.posts
 
-    filename_format = '$t $d $b $s50'
+    filename_format = '$t $d $b $s'
     if args.format is not None:
         filename_format = args.format
     
