@@ -134,6 +134,12 @@ class tumbraider:
         for i in range(len(bad_chars)):
             filename[bad_chars[i]] = '_'
         filename = ''.join(filename)
+        # strip excessive whitespace
+        filename = filename.replace('\n','')
+        filename = filename.replace('\r','')
+        filename = filename.replace('\t','')
+        while '  ' in filename:
+            filename = filename.replace('  ',' ')
         return filename
         
     def download_file(self, filename, folder, url):
