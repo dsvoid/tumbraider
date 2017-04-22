@@ -107,7 +107,7 @@ class tumbraider:
             'i' : str(post['id']),
             'n' : str(post['note_count']),
             's' : post['summary'][:min(50, l)],
-            't' : ' '.join(post['tags']),
+            't' : ' '.join(post['tags']) if len(post['tags']) > 0 else '[no tags]',
             'T' : post['title'] if 'title' in post else '[no title]',
             'u' : post['post_url']
         }
@@ -132,9 +132,13 @@ class tumbraider:
         bad_chars = [match.start() for match in re.finditer('[<>:"/\\|?*]', filename)]
         filename = list(filename)
         for i in range(len(bad_chars)):
-            filename[i] = '_'
+            filename[bad_chars[i]] = '_'
         filename = ''.join(filename)
-        filename = filename.replace('\n', '')
+        # strip excessive whitespace
+        filename = filename.replace('\n','')
+        filename = filename.replace('\r','')
+        filename = filename.replace('\t','')
+        filename = ' '.join(filename.split())
         return filename
         
     def download_file(self, filename, folder, url):
@@ -249,7 +253,7 @@ if __name__ == '__main__':
     if args.posts is not None and args.posts < count:
         count = args.posts
 
-    filename_format = '$t $d $b $s50'
+    filename_format = '$d $b $s'
     if args.format is not None:
         filename_format = args.format
     
