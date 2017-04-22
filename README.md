@@ -20,7 +20,7 @@ optional arguments:
                             $c : caption of blog post
                             $d : date and time of blog post
                             $i : id of blog post
-														(as in [blog name].tumblr.com/post/[id of post])
+                            (as in [blog name].tumblr.com/post/[id of post])
                             $n : number of notes in blog post
                             $s : summary of blog post
                             $t : blog post's tags
