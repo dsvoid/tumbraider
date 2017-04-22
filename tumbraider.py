@@ -132,9 +132,8 @@ class tumbraider:
         bad_chars = [match.start() for match in re.finditer('[<>:"/\\|?*]', filename)]
         filename = list(filename)
         for i in range(len(bad_chars)):
-            filename[i] = '_'
+            filename[bad_chars[i]] = '_'
         filename = ''.join(filename)
-        filename = filename.replace('\n', '')
         return filename
         
     def download_file(self, filename, folder, url):
