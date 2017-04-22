@@ -12,7 +12,7 @@ optional arguments:
   -h, --help            show this help message and exit
   -f FOLDER, --folder FOLDER
                         save images to specified folder
-												(program directory by default)
+                        (program directory by default)
   -F FORMAT, --format FORMAT
                         use a format for filenames ('$d $b $s' by default)
                             USEFUL CODES:
@@ -28,10 +28,10 @@ optional arguments:
                             $u : blog post's URL
   -p POSTS, --posts POSTS
                         specify number of posts from blog to download from
-												(unlimited by default)
+                        (unlimited by default)
   -s START, --start START
                         specify post from blog to start downloading from
-												(0 by default)
+                        (0 by default)
   -V, --videos          also download tumblr-hosted videos
   -v, --verbose         verbose output
 ```
