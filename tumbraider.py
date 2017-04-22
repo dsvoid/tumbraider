@@ -70,6 +70,21 @@ class tumbraider:
                         # download video
                         url = embed_code[src_index:embed_code.find('"', src_index)]
                         self.download_file(filename, folder, url)
+                # look for images in text posts
+                if post['type'] == 'text':
+                    content = str(post['reblog'])
+                    imgIndices = [match.start() for match in re.finditer('img src="', content)]
+                    for i in range(len(imgIndices)):
+                        imgIndices[i] += 9
+                        url = content[imgIndices[i]:content.find('"',imgIndices[i])]
+                        if url.find('media.tumblr.com') != -1:
+                            underscore = url.rfind('_')
+                            period = url.rfind('.')
+                            url = url[:underscore+1] + '1280' + url[period:]
+                        filename = self.format_txtimg_filename(post, i, len(imgIndices), url)
+                        if verbose:
+                            print filename
+                        self.download_file(filename, folder, url)
 
             # advance for next request
             count -= 20
@@ -94,6 +109,15 @@ class tumbraider:
 
     def format_video_filename(self, post):
         filename = self.format_base_filename(post) + '.mp4'
+        return filename
+
+    def format_txtimg_filename(self, post, index, length, url):
+        filename = self.format_base_filename(post)
+        if length > 1:
+            sigfigs = len(str(length))
+            filename = filename + ' ' + str(index+1).zfill(sigfigs)
+        ext = url[url.rfind('.'):]
+        filename = filename + ext
         return filename
 
     def format_base_filename(self, post):
