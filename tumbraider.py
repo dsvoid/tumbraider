@@ -26,9 +26,11 @@ class tumbraider:
     def raid(self, blog, count, start=0, folder='', filename_format=None,
              metadata=False, videos=False, verbose=False):
 
-
         # set the blog's info once to minimize requests to the tumblr API
         self.set_current_blog_info(blog)
+
+        if folder != '' and folder[-1] != '/':
+            folder = folder + '/'
 
         json_data = None
         if metadata:
@@ -107,8 +109,11 @@ class tumbraider:
             start += 20
         
         if metadata:
-            with open('down.json', 'w') as outfile:
+            with open(folder + 'down.json', 'w') as outfile:
                 json.dump(json_data, outfile, indent=2)
+            if verbose:
+                print 'Wrote download metadata to ' + folder + 'down.json'
+
         print 'Finished downloading images from ' + blog + '.tumblr.com'
 
     def set_filename_format(self, filename_format):
@@ -191,8 +196,6 @@ class tumbraider:
             if folder != '':
                 if not os.path.exists(folder):
                     os.makedirs(folder)
-                if folder[-1] != '/':
-                    folder = folder + '/'
             r = requests.get(url)
             r.raise_for_status()
             with open(folder + filename, 'wb') as f:
