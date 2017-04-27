@@ -110,7 +110,7 @@ class tumbraider:
             start += 20
         
         if metadata:
-            m_filename = 'tumbraider ' + time.strftime('%Y-%m-%d %H:%M:%S') + '.json'
+            m_filename = 'tumbraider ' + time.strftime('%Y-%m-%d %H-%M-%S') + '.json'
             with open(folder + m_filename, 'w') as outfile:
                 json.dump(json_data, outfile, indent=2)
             if verbose:
