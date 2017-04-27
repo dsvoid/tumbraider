@@ -1,6 +1,7 @@
 import keys # would-be devs: get your own keys for now and put them in a keys.py
 import argparse
 from argparse import RawTextHelpFormatter
+import time
 import requests
 import pytumblr
 import re
@@ -109,10 +110,11 @@ class tumbraider:
             start += 20
         
         if metadata:
-            with open(folder + 'down.json', 'w') as outfile:
+            m_filename = 'tumbraider ' + time.strftime('%Y-%m-%d %H:%M:%S') + '.json'
+            with open(folder + m_filename, 'w') as outfile:
                 json.dump(json_data, outfile, indent=2)
             if verbose:
-                print 'Wrote download metadata to ' + folder + 'down.json'
+                print 'Wrote download metadata to ' + folder + m_filename
 
         print 'Finished downloading images from ' + blog + '.tumblr.com'
 
@@ -279,7 +281,7 @@ if __name__ == '__main__':
     parser.add_argument("blog", help="download images from specified tumblr blog")
     parser.add_argument("-f", "--folder", help="""save images to specified folder
 (program directory by default)""")
-    parser.add_argument("-F", "--format", help="""use a format for filenames ('$d $b $s' by default)
+    parser.add_argument("-F", "--format", help="""use a format for filenames ('$d - $b - $s' by default)
     USEFUL CODES:
     $b : blog name
     $c : caption of blog post
