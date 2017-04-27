@@ -14,7 +14,7 @@ optional arguments:
                         save images to specified folder
                         (program directory by default)
   -F FORMAT, --format FORMAT
-                        use a format for filenames ('$d $b $s' by default)
+                        use a format for filenames ('$d - $b - $s' by default)
                             USEFUL CODES:
                             $b : blog name
                             $c : caption of blog post
@@ -26,6 +26,7 @@ optional arguments:
                             $t : blog post's tags
                             $T : blog post's title
                             $u : blog post's URL
+  -m, --metadata        Save downloaded metadata to a JSON file
   -p POSTS, --posts POSTS
                         specify number of posts from blog to download from
                         (unlimited by default)
