@@ -26,6 +26,7 @@ optional arguments:
                             $t : blog post's tags
                             $T : blog post's title
                             $u : blog post's URL
+  -m, --metadata        Save downloaded metadata to a JSON file
   -p POSTS, --posts POSTS
                         specify number of posts from blog to download from
                         (unlimited by default)

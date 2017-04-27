@@ -5,6 +5,7 @@ import requests
 import pytumblr
 import re
 import os
+import json
 from pprint import pprint
 from PIL import Image
 from io import BytesIO
@@ -22,9 +23,18 @@ class tumbraider:
         self.current_blog_info = None
         self.filename_format = '$d - $b - $s'
 
-    def raid(self, blog, count, start=0, folder='', filename_format=None, videos=False, verbose=False):
+    def raid(self, blog, count, start=0, folder='', filename_format=None,
+             metadata=False, videos=False, verbose=False):
+
+
         # set the blog's info once to minimize requests to the tumblr API
         self.set_current_blog_info(blog)
+
+        json_data = None
+        if metadata:
+            json_data = self.current_blog_info
+            json_data['downloads'] = []
+
         if filename_format is not None:
             self.set_filename_format(filename_format)
 
@@ -59,6 +69,8 @@ class tumbraider:
                         # download image
                         url = photo['original_size']['url']
                         self.download_file(filename, folder, url)
+                        if metadata:
+                            json_data['downloads']+=[{filename:post}]
                 # look for videos
                 if videos and 'player' in post and type(post['player'][0]) is dict:
                     embed_code = post['player'][0]['embed_code']
@@ -70,6 +82,8 @@ class tumbraider:
                         # download video
                         url = embed_code[src_index:embed_code.find('"', src_index)]
                         self.download_file(filename, folder, url)
+                        if metadata:
+                            json_data['downloads']+=[{filename:post}]
                 # look for images in text posts
                 if post['type'] == 'text':
                     content = str(post['reblog'])
@@ -85,11 +99,16 @@ class tumbraider:
                         if verbose:
                             print filename
                         self.download_file(filename, folder, url)
+                        if metadata:
+                            json_data['downloads']+=[{filename:post}]
 
             # advance for next request
             count -= 20
             start += 20
-
+        
+        if metadata:
+            with open('down.json', 'w') as outfile:
+                json.dump(json_data, outfile, indent=2)
         print 'Finished downloading images from ' + blog + '.tumblr.com'
 
     def set_filename_format(self, filename_format):
@@ -270,6 +289,7 @@ if __name__ == '__main__':
     $T : blog post's title
     $u : blog post's URL""",
     type=str)
+    parser.add_argument("-m", "--metadata", help="""Save downloaded metadata to a JSON file""", action="store_true")
     parser.add_argument("-p", "--posts", help="""specify number of posts from blog to download from
 (unlimited by default)""", type=int)
     parser.add_argument("-s", "--start", help="""specify post from blog to start downloading from
@@ -298,5 +318,5 @@ if __name__ == '__main__':
         filename_format = args.format
     
     # begin raiding the tumb
-    tr.raid(args.blog, count, start, folder, filename_format, args.videos, args.verbose)
+    tr.raid(args.blog, count, start, folder, filename_format, args.metadata, args.videos, args.verbose)
 
