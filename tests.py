@@ -144,8 +144,5 @@ class TumbRaiderTests(unittest.TestCase):
         self.assertTrue(os.path.exists(folder + '/' + filename))
         shutil.rmtree(folder)
 
-    def test_date_range(self):
-        """Make sure date ranges are changed correctly"""
-
 if __name__ == '__main__':
     unittest.main()
