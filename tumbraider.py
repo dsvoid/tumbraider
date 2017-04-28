@@ -44,6 +44,16 @@ class tumbraider:
         if filename_format is not None:
             self.set_filename_format(filename_format)
 
+        # handle invalid count and start input
+        if count < 1:
+            raise self.InvalidCountError(count)
+        if start < 0 or start > self.num_posts() - 1:
+            raise self.InvalidStartError(start, self.num_posts())
+
+        # correct count if it exceeds number of posts
+        if count > self.num_posts() - start:
+            count = self.num_posts() - start
+
         # parse date inputs for 'before' and 'after' arguments
         if after is not None:
             after = self.parse_date(after, 'after')
@@ -59,22 +69,13 @@ class tumbraider:
                     if before[2] < after[2]:
                         raise self.DateMismatchError()
 
-        # handle invalid count and start input
-        if count < 1:
-            raise self.InvalidCountError(count)
-        if start < 0 or start > self.num_posts() - 1:
-            raise self.InvalidStartError(start, self.num_posts())
-
-        # correct count if it exceeds number of posts
-        if count > self.num_posts() - start:
-            count = self.num_posts() - start
-
         # determine which post to start with if 'before' is specified,
         # change count if necessary
         if before is not None:
             new_start = self.binary_search(start, count, before)
             count = count - (new_start - start)
             start = new_start
+            print [start,count]
 
         print 'Downloading images in ' + str(count) + ' posts from ' + blog + '.tumblr.com...'
         if verbose and folder != "":
@@ -166,10 +167,6 @@ class tumbraider:
             if len(date[i]) > 2:
                 raise self.InvalidDateError(marker)
             date[i] = int(date[i])
-        if date[0] < 7:
-            date[0] = 7 # tumblr didn't exist before '07
-        if 2000 + date[0] > datetime.date.today().year:
-            date[0] = datetime.date.today().year[2:]
         if date[1] > 12:
             date[1] = 12
         if date[1] < 1:
@@ -188,11 +185,10 @@ class tumbraider:
         return date
 
     def binary_search(self, start, count, before):
-        print str(before[0]) + ' ' + str(before[1]) + ' ' + str(before[2])
         s = start
-        c = count - 1
+        c = count + start - 1
         m = None
-        while s+c > s:
+        while c > s :
             m = c//2 + s
             post_date = self.request_posts(1, m)['posts'][0]['date']
             year = int(post_date[2:4])
@@ -391,7 +387,7 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--before", help="""save images before a certain date (in yy-mm-dd format)""")
     parser.add_argument("-f", "--folder", help="""save images to specified folder
 (program directory by default)""")
-    parser.add_argument("-F", "--format", help="""use a format for filenames ('$d $b $s' by default)
+    parser.add_argument("-F", "--format", help="""use a format for filenames ('$d - $b - $s' by default)
     USEFUL CODES:
     $b : blog name
     $c : caption of blog post
@@ -428,7 +424,7 @@ if __name__ == '__main__':
     if args.posts is not None and args.posts < count:
         count = args.posts
 
-    filename_format = '$d $b $s'
+    filename_format = '$d - $b - $s'
     if args.format is not None:
         filename_format = args.format
     
