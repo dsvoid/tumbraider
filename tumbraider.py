@@ -2,8 +2,10 @@ import keys # would-be devs: get your own keys for now and put them in a keys.py
 import argparse
 from argparse import RawTextHelpFormatter
 import time
+import datetime
 import requests
 import pytumblr
+import calendar
 import re
 import os
 import json
@@ -25,7 +27,8 @@ class tumbraider:
         self.filename_format = '$d - $b - $s'
 
     def raid(self, blog, count, start=0, folder='', filename_format=None,
-             metadata=False, videos=False, verbose=False):
+             metadata=False, videos=False, verbose=False,
+             after=None, before=None):
 
         # set the blog's info once to minimize requests to the tumblr API
         self.set_current_blog_info(blog)
@@ -41,7 +44,22 @@ class tumbraider:
         if filename_format is not None:
             self.set_filename_format(filename_format)
 
-        # handle invalid input
+        # parse date inputs for 'before' and 'after' arguments
+        if after is not None:
+            after = self.parse_date(after, 'after')
+        if before is not None:
+            before = self.parse_date(before, 'before')
+        if before is not None and after is not None:
+            if before[0] < after[0]:
+                raise self.DateMismatchError()
+            elif before[0] == after[0]:
+                if before[1] < after[1]:
+                    raise self.DateMismatchError()
+                elif before[1] == after[1]:
+                    if before[2] < after[2]:
+                        raise self.DateMismatchError()
+
+        # handle invalid count and start input
         if count < 1:
             raise self.InvalidCountError(count)
         if start < 0 or start > self.num_posts() - 1:
@@ -51,59 +69,81 @@ class tumbraider:
         if count > self.num_posts() - start:
             count = self.num_posts() - start
 
+        # determine which post to start with if 'before' is specified,
+        # change count if necessary
+        if before is not None:
+            new_start = self.binary_search(start, count, before)
+            count = count - (new_start - start)
+            start = new_start
+
         print 'Downloading images in ' + str(count) + ' posts from ' + blog + '.tumblr.com...'
         if verbose and folder != "":
             print 'Saving images to ' + os.path.abspath(folder)
 
-        while count > 0:
+        within_date = True
+        while count > 0 and within_date:
             # request posts from tumblr API
             posts = self.request_posts(count, start)
 
             # iterate over the results of each request
             for post in posts['posts']:
-                # look for images
-                if 'photos' in post:
-                    photoset = enumerate(post['photos'])
-                    for index, photo in photoset:
-                        # format filename
-                        filename = self.format_image_filename(post, photo, index)
-                        if verbose:
-                            print filename
-                        # download image
-                        url = photo['original_size']['url']
-                        self.download_file(filename, folder, url)
-                        if metadata:
-                            json_data['downloads']+=[{filename:post}]
-                # look for videos
-                if videos and 'player' in post and type(post['player'][0]) is dict:
-                    embed_code = post['player'][0]['embed_code']
-                    src_index = embed_code.find('<source src="') + 13
-                    if src_index != 12:
-                        filename = self.format_video_filename(post)
-                        if verbose:
-                            print filename
-                        # download video
-                        url = embed_code[src_index:embed_code.find('"', src_index)]
-                        self.download_file(filename, folder, url)
-                        if metadata:
-                            json_data['downloads']+=[{filename:post}]
-                # look for images in text posts
-                if post['type'] == 'text':
-                    content = str(post['reblog'])
-                    imgIndices = [match.start() for match in re.finditer('img src="', content)]
-                    for i in range(len(imgIndices)):
-                        imgIndices[i] += 9
-                        url = content[imgIndices[i]:content.find('"',imgIndices[i])]
-                        if url.find('media.tumblr.com') != -1:
-                            underscore = url.rfind('_')
-                            period = url.rfind('.')
-                            url = url[:underscore+1] + '1280' + url[period:]
-                        filename = self.format_txtimg_filename(post, i, len(imgIndices), url)
-                        if verbose:
-                            print filename
-                        self.download_file(filename, folder, url)
-                        if metadata:
-                            json_data['downloads']+=[{filename:post}]
+                if after is not None:
+                    post_date = post['date']
+                    y = int(post_date[2:4])
+                    m = int(post_date[5:7])
+                    d = int(post_date[8:10])
+                    if y < after[0]:
+                        within_date = False
+                    elif y == after[0]:
+                        if m < after[1]:
+                            within_date = False
+                        elif m == after[1]:
+                            if d <= after[2]:
+                                within_date = False
+                if within_date:
+                    # look for images
+                    if 'photos' in post:
+                        photoset = enumerate(post['photos'])
+                        for index, photo in photoset:
+                            # format filename
+                            filename = self.format_image_filename(post, photo, index)
+                            if verbose:
+                                print filename
+                            # download image
+                            url = photo['original_size']['url']
+                            self.download_file(filename, folder, url)
+                            if metadata:
+                                json_data['downloads']+=[{filename:post}]
+                    # look for videos
+                    if videos and 'player' in post and type(post['player'][0]) is dict:
+                        embed_code = post['player'][0]['embed_code']
+                        src_index = embed_code.find('<source src="') + 13
+                        if src_index != 12:
+                            filename = self.format_video_filename(post)
+                            if verbose:
+                                print filename
+                            # download video
+                            url = embed_code[src_index:embed_code.find('"', src_index)]
+                            self.download_file(filename, folder, url)
+                            if metadata:
+                                json_data['downloads']+=[{filename:post}]
+                    # look for images in text posts
+                    if post['type'] == 'text':
+                        content = str(post['reblog'])
+                        imgIndices = [match.start() for match in re.finditer('img src="', content)]
+                        for i in range(len(imgIndices)):
+                            imgIndices[i] += 9
+                            url = content[imgIndices[i]:content.find('"',imgIndices[i])]
+                            if url.find('media.tumblr.com') != -1:
+                                underscore = url.rfind('_')
+                                period = url.rfind('.')
+                                url = url[:underscore+1] + '1280' + url[period:]
+                            filename = self.format_txtimg_filename(post, i, len(imgIndices), url)
+                            if verbose:
+                                print filename
+                            self.download_file(filename, folder, url)
+                            if metadata:
+                                json_data['downloads']+=[{filename:post}]
 
             # advance for next request
             count -= 20
@@ -117,6 +157,64 @@ class tumbraider:
                 print 'Wrote download metadata to ' + folder + m_filename
 
         print 'Finished downloading images from ' + blog + '.tumblr.com'
+
+    def parse_date(self, date, marker):
+        date = date.split('-')
+        if len(date) != 3:
+            raise self.InvalidDateError(marker)
+        for i in range(len(date)):
+            if len(date[i]) > 2:
+                raise self.InvalidDateError(marker)
+            date[i] = int(date[i])
+        if date[0] < 7:
+            date[0] = 7 # tumblr didn't exist before '07
+        if 2000 + date[0] > datetime.date.today().year:
+            date[0] = datetime.date.today().year[2:]
+        if date[1] > 12:
+            date[1] = 12
+        if date[1] < 1:
+            date[1] = 1
+        if date[1] == 2:
+            if calendar.isleap(2000 + date[0]) and date[2] > 29:
+                date[2] = 29
+            elif date[2] > 28:
+                date[2] = 28
+        elif date[1] in [1, 3, 5, 7, 8, 10, 12] and date[2] > 31:
+            date[2] = 31
+        elif date[2] > 30:
+            date[2] = 30
+        if date[2] < 1:
+            date[2] = 1
+        return date
+
+    def binary_search(self, start, count, before):
+        print str(before[0]) + ' ' + str(before[1]) + ' ' + str(before[2])
+        s = start
+        c = count - 1
+        m = None
+        while s+c > s:
+            m = c//2 + s
+            post_date = self.request_posts(1, m)['posts'][0]['date']
+            year = int(post_date[2:4])
+            month = int(post_date[5:7])
+            day = int(post_date[8:10])
+            if year == before[0]:
+                if month == before[1]:
+                    if day == before[2]:
+                        return m
+                    elif day > before[2]:
+                        s = m + 1
+                    else:
+                        c = m - s
+                elif month > before[1]:
+                    s = m + 1
+                else:
+                    c = m - s
+            elif year > before[0]:
+                s = m + 1
+            else:
+                c = m - s
+        return m
 
     def set_filename_format(self, filename_format):
         self.filename_format = filename_format
@@ -198,6 +296,8 @@ class tumbraider:
             if folder != '':
                 if not os.path.exists(folder):
                     os.makedirs(folder)
+                if folder[-1] != '/':
+                    folder = folder + '/'
             r = requests.get(url)
             r.raise_for_status()
             with open(folder + filename, 'wb') as f:
@@ -274,14 +374,24 @@ class tumbraider:
         def __init__(self):
             print 'ERROR: the current blog wasn\'t set when the method was called.'
 
+    class InvalidDateError(Exception):
+        def __init__(self, marker):
+            print "ERROR: invalid '" + marker + "' date specified, expected yy-mm-dd format"
+    
+    class DateMismatchError(Exception):
+        def __init__(self):
+            print "ERROR: 'before' date should not be before 'after' date"
+
 
 if __name__ == '__main__':
     # argument parsing for command-line use
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter)
     parser.add_argument("blog", help="download images from specified tumblr blog")
+    parser.add_argument("-a", "--after", help="""save files after a certain datei (in yy-mm-dd format)""")
+    parser.add_argument("-b", "--before", help="""save images before a certain date (in yy-mm-dd format)""")
     parser.add_argument("-f", "--folder", help="""save images to specified folder
 (program directory by default)""")
-    parser.add_argument("-F", "--format", help="""use a format for filenames ('$d - $b - $s' by default)
+    parser.add_argument("-F", "--format", help="""use a format for filenames ('$d $b $s' by default)
     USEFUL CODES:
     $b : blog name
     $c : caption of blog post
@@ -323,5 +433,6 @@ if __name__ == '__main__':
         filename_format = args.format
     
     # begin raiding the tumb
-    tr.raid(args.blog, count, start, folder, filename_format, args.metadata, args.videos, args.verbose)
+    tr.raid(args.blog, count, start, folder, filename_format, args.metadata,
+            args.videos, args.verbose, args.after, args.before)
 

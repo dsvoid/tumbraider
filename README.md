@@ -9,12 +9,14 @@ positional arguments:
   blog                  download images from specified tumblr blog
 
 optional arguments:
+  -a, --after           save files after a certain date (in yy-mm-dd format)
+  -b, --before          save files before a certain date (in yy-mm-dd format)
   -h, --help            show this help message and exit
   -f FOLDER, --folder FOLDER
                         save images to specified folder
                         (program directory by default)
   -F FORMAT, --format FORMAT
-                        use a format for filenames ('$d - $b - $s' by default)
+                        use a format for filenames ('$d $b $s' by default)
                             USEFUL CODES:
                             $b : blog name
                             $c : caption of blog post
