@@ -60,14 +60,31 @@ class TumbRaiderTests(unittest.TestCase):
         """Make sure the raid() method works as intended"""
         folder = 'tmp'
         self.tr.current_blog_info = None
-        n = self.tr.num_posts('staff')
-        self.tr.raid('staff', 10, n - 11, folder, verbose=True)
+        blog='staff'
+        n = self.tr.num_posts(blog)
+        self.tr.raid(blog, 10, n - 11, folder, verbose=True)
         self.assertTrue(os.path.exists(folder))    
         shutil.rmtree(folder)
-        self.tr.raid('staff', 9999999, n - 11, folder + '/')
+        self.tr.raid(blog, 9999999, n - 11, folder + '/')
         self.assertTrue(os.path.exists(folder))
         shutil.rmtree(folder)
-        self.tr.raid('blogwithonepost', self.tr.num_posts('blogwithonepost'), 0, folder, videos=True, verbose=True)
+
+        blog = 'blogwithonepost'
+        n = self.tr.num_posts(blog)
+        self.tr.raid(blog, n, 0, folder, videos=True, verbose=True)
+        self.assertTrue(os.path.exists(folder))
+        shutil.rmtree(folder)
+        self.tr.raid(blog, n, 0, folder, before='17-4-21', videos=True)
+        self.assertTrue(os.path.exists(folder + '/' + '2017-04-17 16_58_30 - blogwithonepost -.mp4'))
+        shutil.rmtree(folder)
+        self.tr.raid(blog, n, 0, folder, before='17-4-10')
+        self.assertTrue(not os.path.exists(folder))
+        self.tr.raid(blog, n, 0, folder, after='99-12-31') # rewrite later
+        self.assertTrue(not os.path.exists(folder))
+        self.tr.raid(blog, n, 0, folder, after='17-1-1')
+        self.assertTrue(os.path.exists(folder))
+        shutil.rmtree(folder)
+        self.tr.raid(blog, n, 0, folder, before='17-4-23', after='17-4-20', videos=True, verbose=True)
         self.assertTrue(os.path.exists(folder))
         shutil.rmtree(folder)
 
@@ -85,6 +102,17 @@ class TumbRaiderTests(unittest.TestCase):
             self.tr.raid('/', 1)
         with self.assertRaises(self.tr.PrivateBlogError):
             self.tr.raid('iikkssiioovvss', 1)
+        with self.assertRaises(self.tr.DateMismatchError):
+            self.tr.raid('blogwithonepost', 1, 0, before='17-1-1', after='17-1-2')
+        with self.assertRaises(self.tr.DateMismatchError):
+            self.tr.raid('blogwithonepost', 1, 0, before='17-1-1', after='17-2-1')
+        with self.assertRaises(self.tr.DateMismatchError):
+            self.tr.raid('blogwithonepost', 1, 0, before='17-1-1', after='18-1-1')
+        with self.assertRaises(self.tr.InvalidDateError):
+            self.tr.raid('blogwithonepost', 1, 0, before='999-99-99')
+        with self.assertRaises(self.tr.InvalidDateError):
+            self.tr.raid('blogwithonepost', 1, 0, before='lol')
+
 
     def test_plain_download(self):
         """Make sure download_file() method works as intended"""

@@ -9,6 +9,8 @@ positional arguments:
   blog                  download images from specified tumblr blog
 
 optional arguments:
+  -a, --after           save files after a certain date (in yy-mm-dd format)
+  -b, --before          save files before a certain date (in yy-mm-dd format)
   -h, --help            show this help message and exit
   -f FOLDER, --folder FOLDER
                         save images to specified folder
