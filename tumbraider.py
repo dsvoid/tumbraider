@@ -75,7 +75,6 @@ class tumbraider:
             new_start = self.binary_search(start, count, before)
             count = count - (new_start - start)
             start = new_start
-            print [start,count]
 
         print 'Downloading images in ' + str(count) + ' posts from ' + blog + '.tumblr.com...'
         if verbose and folder != "":

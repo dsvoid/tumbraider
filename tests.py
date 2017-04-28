@@ -102,6 +102,17 @@ class TumbRaiderTests(unittest.TestCase):
             self.tr.raid('/', 1)
         with self.assertRaises(self.tr.PrivateBlogError):
             self.tr.raid('iikkssiioovvss', 1)
+        with self.assertRaises(self.tr.DateMismatchError):
+            self.tr.raid('blogwithonepost', 1, 0, before='17-1-1', after='17-1-2')
+        with self.assertRaises(self.tr.DateMismatchError):
+            self.tr.raid('blogwithonepost', 1, 0, before='17-1-1', after='17-2-1')
+        with self.assertRaises(self.tr.DateMismatchError):
+            self.tr.raid('blogwithonepost', 1, 0, before='17-1-1', after='18-1-1')
+        with self.assertRaises(self.tr.InvalidDateError):
+            self.tr.raid('blogwithonepost', 1, 0, before='999-99-99')
+        with self.assertRaises(self.tr.InvalidDateError):
+            self.tr.raid('blogwithonepost', 1, 0, before='lol')
+
 
     def test_plain_download(self):
         """Make sure download_file() method works as intended"""
