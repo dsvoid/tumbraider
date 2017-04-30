@@ -16,7 +16,7 @@ optional arguments:
                         save images to specified folder
                         (program directory by default)
   -F FORMAT, --format FORMAT
-                        use a format for filenames ('$d - $b - $s' by default)
+                        use a format for filenames ('$d $b $s' by default)
                             USEFUL CODES:
                             $b : blog name
                             $c : caption of blog post
