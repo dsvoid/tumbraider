@@ -1,5 +1,5 @@
 # tumbraider
-Downloads images off of a tumblr iteratively. Requires Python.
+Downloads images off of a tumblr iteratively. Requires Python 2.
 
 ## usage
 `python tumbraider.py [-h] [-f FOLDER] [-F FORMAT] [-p POSTS] [-s START] [-V] [-v] blog`
